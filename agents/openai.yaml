@@ -1,0 +1,8 @@
+interface:
+  display_name: "Dynamic Chat Title"
+  short_description: "Evaluate and update stale chat titles when topics shift"
+  brand_color: "#6366F1"
+  default_prompt: "Use $dynamic-chat-title to evaluate our full conversation history and suggest or apply an accurate chat title."
+
+policy:
+  allow_implicit_invocation: true

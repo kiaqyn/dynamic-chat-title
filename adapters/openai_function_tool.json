@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Universal OpenAI Function Calling & MCP Tool Schema for `dynamic-chat-title` (Compatible with Dify, Coze, FastGPT, LangChain, Vercel AI SDK, OpenWebUI Tools, LibreChat)",
+  "openai_tool": {
+    "type": "function",
+    "function": {
+      "name": "update_chat_title",
+      "description": "Update the current conversation title ONLY when the discussion topic has undergone a sustained (>=3 turns), substantive shift across the conversation history, or when explicitly requested by the user. Never call for single-turn tangents or casual chitchat.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "new_title": {
+            "type": "string",
+            "description": "Concise, accurate new title matching the conversation language (6-16 Chinese characters or 3-8 English words). No filler like 'Discussion about...', no sensitive PII/keys."
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "sustained_topic_shift",
+              "umbrella_abstraction",
+              "user_explicit_request",
+              "outdated_initial_title"
+            ],
+            "description": "The specific trigger condition satisfied from the dynamic-chat-title specification."
+          }
+        },
+        "required": ["new_title", "reason"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "mcp_tool": {
+    "name": "update_chat_title",
+    "description": "Update the current conversation title when a substantive, sustained topic shift occurs.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "new_title": {
+          "type": "string",
+          "description": "Concise new title (6-16 Chinese chars or 3-8 English words)."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Trigger reason for renaming."
+        }
+      },
+      "required": ["new_title"]
+    }
+  }
+}
