@@ -104,7 +104,7 @@ description: "Evaluate whether the current conversation title still reflects the
 ```
 
 ### 5.1 Tier 1：原生工具语义自适应探测（Tool Execution Mode）
-- **按语义识别，不按固定名字**：扫描当前可用的工具声明（Tools / Functions / MCP），只要某个工具的名称或描述明确表示"修改当前会话/对话/线程的标题"（例如 `rename_conversation`、`set_title`、`update_chat_title`、`set_thread_name`），就把新标题填入它的标题参数并调用。名称或用途不确定的工具一律不调用。
+- **按语义识别，直接静默执行**：扫描当前可用的工具声明（Tools / Functions / MCP），只要某个工具的名称或描述明确表示"修改当前会话/对话/线程的标题"（例如 OpenAI Codex 内置的 `mcp__codex_app__set_thread_title` / `set_thread_title`、或通用的 `rename_conversation`、`set_title`、`update_chat_title`、`set_thread_name`），在**真实对话场景**（非用户明确声明“假设……”的测试用例）下一旦判定为 `RENAME`，**立即在同一轮直接调用该工具将新标题写入 UI**，无需等待用户额外追问“帮我重命名”。名称或用途不确定的工具一律不调用。
 - 调用工具后，无需在正文中长篇大论汇报改名过程，保持主线回答流畅。
 
 ### 5.2 Tier 2：第三方中间件标签自适应（Middleware / Tag Mode）
@@ -119,9 +119,10 @@ description: "Evaluate whether the current conversation title still reflects the
      > 💡 **建议更新会话标题**：「`<新标题>`」（当前平台不支持模型直接改名，可手动复制更新）
   4. **面对直接改名请求**：若用户直接命令“帮我改一下标题”，应先给出符合规范的新标题建议，同时诚实说明：“当前宿主环境未向模型开放直接修改会话标题的接口，已为你生成最佳标题，可手动复制应用。”
 
-### 5.4 平台加载机制局限说明
-- `SKILL.md` 本质是供模型阅读的行为规约（Runbook），而非宿主底层进程；
-- 在采用按需渐进式加载（Progressive Disclosure）的平台中，仅靠 `SKILL.md` 本身无法保证每轮对话都被强制自动加载，通常需配合宿主的全局常驻规则（`always_on` Rule / `AGENTS.md` / `CLAUDE.md` / `.cursorrules`）或由用户在需要评估时显式唤起。
+### 5.4 周期性自动巡检与常驻挂载模式（Periodic Auto-Sync Mode）
+- `SKILL.md` 本质是供模型阅读的行为规约（Runbook）。若希望模型在长对话中**每隔一段时间全自动更新标题**（无需手动输入 `$dynamic-chat-title`），只需将以下轻量巡检钩子挂载至宿主的全局常驻指令（如 `~/.codex/AGENTS.md`、`~/.claude/CLAUDE.md` 或 `always_on` Rule）：
+  - **巡检周期**：在真实对话中，每间隔约 **5 轮对话**，或当明显感知到新核心议题已连续稳定讨论 **≥ 3 轮** 且与当前会话标题严重不符时，顺带执行一次静默评估；
+  - **静默执行**：若判定 `KEEP` 则完全静默（零额外输出）；若判定 `RENAME` 且宿主具备 Tier 1 原生改名工具（如 Codex 的 `mcp__codex_app__set_thread_title`），则在正常回答用户问题的同时**直接静默调用工具刷新左上角与侧边栏标题**，实现无感全自动标题同步。
 
 ---
 
