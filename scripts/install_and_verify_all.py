@@ -60,13 +60,6 @@ PLATFORM_REGISTRY = [
         "mode": "skill_dir",
         "core": True,
     },
-    {
-        "name": "Universal (.agents)",
-        "probe_dir": HOME / ".agents",
-        "target_dir": HOME / ".agents" / "skills" / "dynamic-chat-title",
-        "mode": "skill_dir",
-        "core": True,
-    },
     # Third-Party IDE / CLI Agent Platforms (Auto-probed dynamically)
     {
         "name": "Windsurf (Codeium)",
@@ -123,6 +116,68 @@ CODEX_OFFICIAL_VALIDATOR = (
     HOME / ".codex" / "skills" / ".system" / "skill-creator" / "scripts" / "quick_validate.py"
 )
 
+HOOK_MARKER = "[Dynamic Chat Title 周期性自动更新标题规约"
+
+
+def sync_periodic_auto_hooks() -> None:
+    print("\n=== [Step 1.5] Mounting Periodic Auto-Sync Hooks Across All Host Platforms ===")
+    # 1. OpenAI Codex (~/.codex/AGENTS.md)
+    codex_agents = HOME / ".codex" / "AGENTS.md"
+    codex_hook = (
+        "\n## [Dynamic Chat Title 周期性自动更新标题规约 ($dynamic-chat-title)]\n"
+        "- 在真实对话（非用户声明“假设……”的测试场景）中，每间隔约 5 轮对话，或当新的核心话题已连续稳定讨论 >= 3 轮且与当前聊天标题明显不符时，按 `dynamic-chat-title` 规则静默评估标题（单轮临时闲聊/跑题一律 KEEP 不改）。\n"
+        "- 一旦判定需要 RENAME（新标题控制在 6~16 个汉字，直击核心任务），在正常回答用户的同时，**直接调用内置的 `mcp__codex_app__set_thread_title` (`set_thread_title`) 工具自动更新左上角与侧边栏的真实聊天标题**，无需等用户手动输入 `$dynamic-chat-title` 或额外询问确认。\n"
+    )
+    if (HOME / ".codex").exists():
+        existing = codex_agents.read_text(encoding="utf-8") if codex_agents.exists() else ""
+        if HOOK_MARKER not in existing:
+            codex_agents.write_text(existing.rstrip() + "\n" + codex_hook, encoding="utf-8")
+        print(f"  [HOOKED]    OpenAI Codex           -> {codex_agents} (Native `set_thread_title`)")
+
+    # 2. Claude Code (~/.claude/CLAUDE.md)
+    claude_md = HOME / ".claude" / "CLAUDE.md"
+    claude_script = HOME / ".claude" / "skills" / "dynamic-chat-title" / "scripts" / "rename_host_session.py"
+    claude_hook = (
+        "## [Dynamic Chat Title 周期性自动更新标题规约 (/dynamic-chat-title)]\n"
+        "- 在真实对话中，每间隔约 5 轮对话，或当新的核心话题已连续稳定讨论 >= 3 轮且与当前会话标题明显不符时，按 `dynamic-chat-title` 规则静默评估标题（单轮临时闲聊一律 KEEP 不改）。\n"
+        f"- 一旦判定需要 RENAME（新标题控制在 6~16 个汉字），若存在原生改名工具则直接调用；否则静默运行 `python \"{claude_script.as_posix()}\" \"<新标题>\"` 自动更新 Claude Code 会话列表与终端标题栏，或在回复末尾附注 `💡 建议更新会话标题：「<新标题>」`。\n"
+    )
+    if (HOME / ".claude").exists():
+        existing = claude_md.read_text(encoding="utf-8") if claude_md.exists() else ""
+        if HOOK_MARKER not in existing:
+            claude_md.write_text((existing.rstrip() + "\n\n" + claude_hook).lstrip(), encoding="utf-8")
+        print(f"  [HOOKED]    Claude Code            -> {claude_md} (Session JSONL + Terminal Title)")
+
+    # 3. Cursor (~/.cursor/rules/dynamic-chat-title.mdc)
+    cursor_rule = HOME / ".cursor" / "rules" / "dynamic-chat-title.mdc"
+    cursor_content = (
+        "---\n"
+        "description: Dynamic Chat Title periodic auto-evaluation rule\n"
+        "globs: \n"
+        "alwaysApply: true\n"
+        "---\n\n"
+        "## [Dynamic Chat Title 周期性自动更新标题规约]\n"
+        "- 在长对话中，每间隔约 5 轮对话，或当新的核心话题已连续稳定讨论 >= 3 轮且与旧标题明显不符时，按 `dynamic-chat-title` 规则静默评估（单轮跑题/闲聊一律 KEEP 并完全静默）。\n"
+        "- 若判定为 RENAME（6~16 个汉字，直击核心任务），优先调用宿主改名工具；若当前 IDE 未暴露改名接口，在正常回复最末尾附注一行：`💡 建议更新会话标题：「<新标题>」`。\n"
+    )
+    if (HOME / ".cursor").exists():
+        cursor_rule.parent.mkdir(parents=True, exist_ok=True)
+        cursor_rule.write_text(cursor_content, encoding="utf-8")
+        print(f"  [HOOKED]    Cursor                 -> {cursor_rule} (`alwaysApply: true`)")
+
+    # 4. Google Antigravity (~/.gemini/config/rules/dynamic-chat-title.md)
+    agy_rule = HOME / ".gemini" / "config" / "rules" / "dynamic-chat-title.md"
+    agy_content = (
+        "# Dynamic Chat Title 周期性自动评估规约\n\n"
+        "## [Dynamic Chat Title 周期性自动更新标题规约]\n"
+        "- 当用户在对话中询问标题、要求改标题，或长对话主线发生连续 >= 3 轮的重大专项转移且用户希望同步标题时，遵循 `dynamic-chat-title` Skill 评估（单轮临时闲聊一律 `KEEP` 并完全静默）。\n"
+        "- 若存在原生改名工具则直接调用；若宿主未开放直接改写 UI 标题的接口，则在判定 `RENAME` 时给出 `6~16` 个汉字的精准标题建议。\n"
+    )
+    if (HOME / ".gemini").exists():
+        agy_rule.parent.mkdir(parents=True, exist_ok=True)
+        agy_rule.write_text(agy_content, encoding="utf-8")
+        print(f"  [HOOKED]    Antigravity            -> {agy_rule} (Global Rule)")
+
 
 def adaptive_probe_and_sync(force_all: bool = False) -> list:
     print("=== [Step 1] Adaptive Environment Probing & Multi-Platform Sync ===")
@@ -151,6 +206,7 @@ def adaptive_probe_and_sync(force_all: bool = False) -> list:
             target_file.write_text(skill_md_content, encoding="utf-8")
             print(f"  [INSTALLED] {name:<22} -> {target_file}")
 
+    sync_periodic_auto_hooks()
     return installed_skill_dirs
 
 
