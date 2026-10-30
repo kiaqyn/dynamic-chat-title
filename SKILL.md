@@ -20,8 +20,9 @@ description: "Evaluate whether the current conversation title still reflects the
 ### 严格边界（What This Skill Is NOT）
 - **不是**长期记忆管理系统或对话摘要数据库；
 - **不是** RAG 检索系统或用户画像系统；
-- **不是**独立的后台守护进程或浏览器自动化插件；
-- **不引入**任何外部数据库、MCP 服务、网络爬虫或额外权限配置。
+- **不是**独立的后台守护进程、系统级定时器或浏览器自动化插件；
+- **不能绕过宿主权限直接修改 UI**：只有在开放了改名接口的宿主（如 OpenAI Codex 内置的 `mcp__codex_app__set_thread_title`）或开发者外接了改名脚本/中间件时才能直接修改标题；在未开放改名 API 的宿主（如 Antigravity 或普通网页聊天端）中，只能输出可复制的新标题建议，严禁谎称已修改界面标题；
+- **周期巡检依赖模型注意力**：写入 `AGENTS.md` / `CLAUDE.md` 的周期检查属于软性提示词约束，高负载编码回合可能被模型略过，不能替代硬件级 Hook。
 
 ---
 
